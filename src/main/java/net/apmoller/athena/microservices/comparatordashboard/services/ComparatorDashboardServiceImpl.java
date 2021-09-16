@@ -2,67 +2,31 @@ package net.apmoller.athena.microservices.comparatordashboard.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import net.apmoller.athena.microservices.comparatordashboard.dto.ComparatorDashboardDto;
 import net.apmoller.athena.microservices.comparatordashboard.models.ComparatorDashboard;
-import net.bytebuddy.jar.asm.TypeReference;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
-/**
- * This is an interface for  contract.rates methods
- */
+
 @Service
 @Slf4j
 public class ComparatorDashboardServiceImpl implements ComparatorDashboardService {
     @Override
-    public ComparatorDashboard getresponse(String date) throws IOException {
-        ObjectMapper mapper=new ObjectMapper();
-        ComparatorDashboard comparatorDashboard=mapper.readValue(new File("../resources/response.json"),ComparatorDashboard.class);
-        return comparatorDashboard;
+    public ComparatorDashboard[] readResponseFromJson(String date) throws IOException {
+        Path path = Paths.get("src/main/resources/response.json");
+        Stream<String> lines = Files.lines(path);
+        String athenaRates = lines.collect(Collectors.joining("\n"));
+        lines.close();
+        ObjectMapper mapper = new ObjectMapper();
+        ComparatorDashboard[] athenaRate = mapper.readValue(athenaRates, ComparatorDashboard[].class);
+        return athenaRate;
     }
 
-//public List<ComparatorDashboard> getresponse()
-//{
-//    ObjectMapper mapper=new ObjectMapper();
-//    try {
-//        InputStream inputStream=new FileInputStream(new File("../resources/response.json"));
-//        TypeReference <List<ComparatorDashboard>> typeReference= new TypeReference<List<ComparatorDashboard>>(){};
-//        List<ComparatorDashboard> comparatorDashboards=mapper.readValue(inputStream,typeReference);
-//    } catch (FileNotFoundException e) {
-//        e.printStackTrace();
-//    }
-//    for (ComparatorDashboard p:ComparatorDashboard)
-//    {
-//        System.out.println("");
-//    }
-//    return null;
-//
-//}
-
-
-//
-//    final ContractRateRepository repository;
-//    final ContractRateMapper mapper;
-//
-//    @Autowired
-//    public ComparatorDashboardServiceImpl(ContractRateRepository repository,ContractRateMapper mapper){
-//        this.repository=repository;
-//        this.mapper=mapper;
-//    }
-//
-//
-//    @Override
-//    public Mono<ContractRateDto> getContractRate(String rateCode){
-//        return repository.getContractRateByCode(rateCode).map(r->mapper.modelToDto(r));
-//    }
-//
-//    @Override
-//    public Mono<ContractRateDto> createContractRate(ContractRateDto contractRateDto){
-//        ContractRate contractRate=mapper.DtoToModel(contractRateDto);
-//        return repository.save(contractRate).map(r->mapper.modelToDto(r));
-//    }
 
 }

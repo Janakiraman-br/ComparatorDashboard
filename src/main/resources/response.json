@@ -1,24 +1,20 @@
 [
-{
-	date:"16-09-2021",
-	filesgenerated:"10",
-	filesworking:"5",
-	filesanalysed:"3"
-	
-},
-{
-	date:"15-09-2021",
-	filesgenerated:"20",
-	filesworking:"3",
-	filesanalysed:"1"
-	
-},
-{
-	date:"15-09-2021",
-	filesgenerated:"30",
-	filesworking:"18",
-	filesanalysed:"14"
-	
-}
-
+  {
+    "date": "16-09-2021",
+    "filesGenerated": 10,
+    "filesWorking": 5,
+    "analysed": 3
+  },
+  {
+    "date": "15-09-2021",
+    "filesGenerated": 20,
+    "filesWorking": 3,
+    "analysed": 1
+  },
+  {
+    "date": "15-09-2021",
+    "filesGenerated": 30,
+    "filesWorking": 18,
+    "analysed": 14
+  }
 ]
