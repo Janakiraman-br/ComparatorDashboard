@@ -1,0 +1,10 @@
+apigee-proxy-name: contractrates-api
+apigee-basepath: /api/v1/contractrates
+verify-jwt: forgerock
+apigee-host: maersk-host
+cdt:
+  target: http://<k8s public ingress url>/api/v1/contractrates
+pp:
+  target: http://<k8s public ingress url>/api/v1/contractrates
+prod:
+  target: http://<k8s public ingress url>/api/v1/contractrates

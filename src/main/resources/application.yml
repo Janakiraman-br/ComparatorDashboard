@@ -1,0 +1,88 @@
+server:
+  port: 8080
+
+spring:
+  main:
+    # Mode used to display the banner when the application runs. Can be CONSOLE, LOG or OFF.
+    # See: https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/Banner.Mode.html
+    banner-mode: CONSOLE
+  banner:
+    # Banner text resource location, below file is provided.
+    location: banner.txt
+  jackson:
+    # Controls the inclusion of properties during serialization.
+    default-property-inclusion: non_null
+
+  application:
+    # Application name
+    name: athena-contractrate-demo
+  security:
+    oauth2:
+      client:
+        registration:
+          jwks:
+            uri:${jwksServiceHost}
+
+logging:
+  level:
+    net:
+      apmoller:
+        athena:
+          microservices:
+            comparatordashboard: DEBUG
+    org:
+      springframework: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    enabled-by-default: true
+  endpoint:
+    env:
+      keys-to-sanitize: password,secret, key, token
+    health:
+      probes:
+        enabled: true
+      show-details: always
+      group:
+        liveness:
+          include: livenessProbe, diskSpace,ping # add based on the api needs
+          show-details: always
+        readiness:
+          include: diskSpace,ping  # add based on the api needs
+          show-details: always
+    prometheus:
+      enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    distribution:
+      percentiles[http.server.requests]: 0.90,0.95,0.99
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  info:
+    git:
+      mode: full
+
+#azure:
+#  cosmosdb:
+#    uri: https://contract-pricing.documents.azure.com:443/
+#    #key: C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==
+#    key: YylG2TCZE0gMjp7wj41Q4LV7cnH4Jc0JpRH4PyPsigcXyqTziZXAJ0cB1tO8N34ZVdGKlmsePBTRjdw40uIzhA==
+#    maxpoolsize: 1
+#    database: SampleDB
+
+azure:
+  cosmosdb:
+    uri: ${cosmosDatabaseUri}
+    key: ${databaseAccessKey}
+    maxpoolsize: ${maxpoolsize}
+    database: ${databaseName}

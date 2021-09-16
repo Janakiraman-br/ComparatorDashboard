@@ -1,0 +1,251 @@
+openapi: 3.0.1
+info:
+  title: ${api-name} API Spec
+  description: MAEU-Pricing-Retrieve contracts. Contracts are offered to customers on different corridors (combinations of Origin, Destination, Container, Commodity) and trade routes for which that customer usually produces significant shipment volumes. Customers need to be priced on their contract rates over general market rates. Contract rates are most preferred rates. So it becomes important to know whether a customer has a contract on a specific corridor.
+  version: 1.0
+  contact:
+    name: Athena Team
+  license:
+    name: Maersk
+    url: 'https://api.maersk.co'
+  x-proxy-name: contract-details-lookup-api
+  x-release-notes: |
+  x-availability-status: development
+  x-oas-href: (to be confirmed)
+  x-docs-href: https://confluence.maerskdev.net/display/CoP/Location++experience+API+Architecture+and+Design
+  x-business-owner-email: (to be confirmed) <email>@maersk.com
+  x-product-owner-email:  (to be confirmed) <emai>@maersk.com
+  x-technical-owner-email: (to be confirmed) <email>@maersk.com
+  x-platform: maersk.com
+  x-published-for: internal
+  x-supply-chain-area: Pricing Contracts
+  x-support-l1: (to be confirmed) l1 queue name
+  x-support-l2: (to be confirmed) l2 queue name
+  x-support-l3: (to be confirmed) l3 queue name
+  x-category: data
+  x-avg-data-currency-mins: (to be confirmed) 120
+  x-back-end-systems: Athena
+  x-api-platform: Google Apigee
+  x-visibility: private
+  x-deprecated-by:
+  x-brand: maersk
+  x-layer: system
+servers:
+  - url: 'https://api.maersk.com/pricing'
+    description: Production Environment
+  - url: 'https://api-stage.maersk.com/pricing'
+    description: Pre-Production Environment
+  - url: 'https://api-cdt.maersk.com/pricing'
+    description: Test Environment
+paths:
+  /api/v1/contractheaders:
+    get:
+      tags:
+        - contracts
+      summary: Retreive contracts Header based on OD3CP
+      description: API retrieves Pricing Contract header details for a OD3CP(origin, destination, customer, container type, commodity, and period) combination and an optional named account customer.
+      security:
+        - ApiKeyHeader: []
+          Oauth2Client: []
+      parameters:
+        -  in: query
+           name: origin
+           required: true
+           schema:
+             pattern: '^[a-zA-Z0-9-]{3,20}$'
+             type: string
+           description: Place from where shipment has been booked.
+        -  in: query
+           name: destination
+           required: true
+           schema:
+             pattern: '^[a-zA-Z0-9-]{3,20}$'
+             type: string
+           description: The place where finally shipment has to reach.
+        -   in: query
+            name: carrierCode
+            required: true
+            description:
+              Standard Carrier Alpha Code (SCAC)
+              MAEU - Maersk A/S
+              SAFM - Maersk A/S trading as Safmarine
+              SEAU - Maersk A/S trading as Sealand Americas
+              SEJJ - Sealand Europe A/S
+              MCPU - Sealand Maersk Asia Pte. Ltd.
+              MAEI - Maersk Line Limited
+            schema:
+              type: string
+
+              enum:
+                - MAEU
+                - SAFM
+                - SEAU
+                - SEJJ
+                - MCPU
+                - MAEI
+        -    in: query
+             name: container
+             required: true
+             schema:
+               pattern: '^[a-zA-Z0-9-]{3,20}$'
+               type: string
+             description: Items to be sent in container.
+
+        -    in: query
+             name: customerCode
+             required: true
+             schema:
+               pattern: '^[a-zA-Z0-9-]{3,20}$'
+               type: string
+             description: The owner of the contract rate, often referred to as the price owner. The id itself comes from the customer master data system.
+        -    in: query
+             name: commodityCode
+             required: true
+             schema:
+               pattern: '^[a-zA-Z0-9]{3,20}$'
+               type: string
+             description: Items to be sent in container.
+        -    in: query
+             name: priceCalculationDate
+             required: true
+             schema:
+               pattern: '^[0-9]{4}-(1[0-2]|0[1-9])-(3[01]|[12][0-9]|0[1-9])$'
+               type: string
+             description: 'Date for which rates are valid for example, 2020-08-10'
+        -    in: query
+             name: namedAccountCustomerCode
+             description:  Some contract lines are setup for a combination of price owner + named account. These are known as named account contract lines and allow preferential rates when the end customer making a booking allows tell us who their customer is. The id itself comes from the customer master data system.
+             schema:
+               pattern: '^[a-zA-Z0-9-]{3,20}$'
+               type: string
+
+
+
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractHeaders'
+
+        '400':
+          description: Bad Request.
+          content: { }
+        '401':
+          description: The user is not authenticated in the system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: The user does not have permissions to access this endpoint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Bad URL or no matching contract price found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '500':
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+
+    ContractHeaders:
+      type: array
+      description: list of Unique contracts(by contractNumber)
+      items:
+        $ref: '#/components/schemas/Contract'
+
+
+    Contract:
+      type: object
+      properties:
+        contractNumber:
+          type: integer
+          format: int64
+          pattern: '^[1-9]([0-9]*){1,20}$'
+          description: It is the customer agreement number
+        contractName:
+          type: string
+          pattern: '^.{0,50}$'
+          description: Name in AFLS for ocean contract rates agreed with customer on different trade lines
+        contractEffectiveDate:
+          pattern: '^[0-9]{4}-(1[0-2]|0[1-9])-(3[01]|[12][0-9]|0[1-9])$'
+          type: string
+          description: 'Date from which rates are valid for example, 2020-08-10'
+        contractExpiryDate:
+          pattern: '^[0-9]{4}-(1[0-2]|0[1-9])-(3[01]|[12][0-9]|0[1-9])$'
+          type: string
+          description: 'Date from which rates are invalid for example, 2020-08-10'
+    ApiError:
+      required:
+        - message
+        - method
+        - requestUri
+        - status
+        - timestamp
+      type: object
+      properties:
+        method:
+          type: string
+          description: 'The request method type e.g. GET, POST.'
+        requestUri:
+          type: string
+          description: The request URI.
+        status:
+          type: string
+          description: The textual representation of the response status.
+        timestamp:
+          type: string
+          description: 'The date and time (dd-MM-yyyy hh:mm:ss) the error occurred.'
+        message:
+          type: string
+          description: High level error message.
+        debugMessage:
+          type: string
+          description: Detailed error message.
+        subErrors:
+          type: array
+          description: The list of invalid fields in the request.
+          items:
+            $ref: '#/components/schemas/ApiValidationError'
+    ApiValidationError:
+      required:
+        - field
+        - message
+        - rejectedValue
+      type: object
+      properties:
+        field:
+          type: string
+          description: The field that has failed validation.
+        rejectedValue:
+          type: string
+          description: The value that has failed validation.
+        message:
+          type: string
+          description: The reason and advice for failed validation.
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: Consumer-Key
+    Oauth2Client:       # arbitrary name for the security scheme
+      type: oauth2
+      description: Maersk Identity and Access Management, with access control on client level only
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.maersk.com/oauth2/access_token
+          scopes:
+            ..contractrates.readonly: Basic customer role with read only access
+

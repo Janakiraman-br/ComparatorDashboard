@@ -1,0 +1,238 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+  - master
+  - develop
+  - release/*
+  - feature/*
+
+variables:
+  - group: CommonBuildVariables
+  - name: artifactVersion
+    value: $(Build.BuildId)
+  - name: buildFor
+    value: 'nonprod'
+  - name: runSonar
+    value: true
+  - name: MAVEN_CACHE_FOLDER
+    value: $(Pipeline.Workspace)/.m2/repository
+  - name: MAVEN_OPTS
+    value: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+  - name: SONAR_USER_HOME
+    value: $(Build.Repository.LocalPath)
+  - ${{ if eq(variables['Build.SourceBranchName'], 'master') }}:
+      - name: buildFor
+        value: 'prod'
+  - ${{ if ne(variables['Build.SourceBranchName'], 'master') }}:
+      - name: buildFor
+        value: 'nonprod'
+      - name: runSonar
+        value: false
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+
+resources:
+  repositories:
+    - repository: BDTemplateRepo #repository name can be different
+      type: git
+      name: Engineering Enablement/template-blackduck
+      ref: refs/heads/master
+    - repository: PolarisTemplateRepo # name needs to stay the same!
+      type: git
+      name: Engineering Enablement/templates
+      ref: refs/heads/master # use master branch as default
+
+
+
+
+stages:
+  - stage: Build
+    displayName: Build and Push Image
+    jobs:
+      #      - job: Environment
+      #        displayName: Set environment variables
+      #        steps:
+      #          - bash: echo This script could use $ATHENA_FEED_ACCESSTOKEN
+      #            env:
+      #              ATHENA_FEED_ACCESSTOKEN: $(athena_feed_password)
+      #          - powershell: echo "This script could use $ATHENA_FEED_ACCESSTOKEN"
+      #            env:
+      #              ATHENA_FEED_ACCESSTOKEN: $(athena_feed_password)
+
+      - template: polaris.template.yml@PolarisTemplateRepo
+        parameters:
+          webAppScan: 'webAppScanFalse'
+          polarisScanBranch: 'master'
+          javaVersion: '11'
+          replaceTokenFile: 'settings.xml'
+      - job: Build
+        displayName: Code and Image Build
+        dependsOn: Polaris_Scan
+
+
+        steps:
+          - task: MavenAuthenticate@0
+            displayName: 'Maven Authenticate'
+            inputs:
+              artifactsFeeds: 'athena-feed'
+              mavenServiceConnections: 'athena-feed-sn'
+          - checkout: self
+            persistCredentials: true
+            clean: true
+          - task: Cache@2
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+            displayName: Cache Maven local repo
+
+          - task: SonarQubePrepare@4
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+            inputs:
+              SonarQube: 'athena-sonar-connection'
+              scannerMode: Other
+              extraProperties: |
+                sonar.projectKey=athena-contractrates
+                sonar.projectName=athena-contractrates
+                sonar.projectVersion=1.0.0
+                sonar.exclusions= **/net/apmoller/athena/microservices/contractrates/repositories/*, **/net/apmoller/athena/microservices/contractrates/ContractRatesApplication.java, **/net/apmoller/athena/microservices/contractrates/models/*, **/net/apmoller/athena/microservices/contractrates/domains/*
+                ## Source information
+                sonar.sources=src/main/java
+                sonar.java.source=11
+
+          - task: Bash@3
+            inputs:
+              targetType: 'inline'
+              script: |
+                echo "Using version: $(artifactVersion)"
+                echo "Build for : $(buildFor)"
+          - task: Maven@3
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: true
+              sonarQubeRunAnalysis: $(runSonar)
+              sqMavenPluginVersionChoice: latest
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              goals: 'package'
+          - template: blackduck.template.yml@BDTemplateRepo
+            parameters:
+              customTags: 'maven'
+              sourcePath: $(Build.Repository.LocalPath)
+          - task: CopyFiles@2
+            displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+            inputs:
+              SourceFolder: '$(system.defaultworkingdirectory)'
+              Contents: '**/*.jar'
+              TargetFolder: '$(build.artifactstagingdirectory)'
+            condition: succeeded()
+
+          - task: CopyFiles@2
+            inputs:
+              SourceFolder: 'aks/'
+              Contents: '**'
+              TargetFolder: '$(Build.ArtifactStagingDirectory)/aks'
+              OverWrite: true'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact: drop'
+            inputs:
+              PathtoPublish: '$(build.artifactstagingdirectory)'
+              ArtifactName: 'drop'
+            condition: succeeded()
+
+          - task: Bash@3
+            displayName: Log Build is done
+            inputs:
+              targetType: 'inline'
+              script:
+                echo "Maven Build success"
+
+          - task: SonarQubePublish@4
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+            inputs:
+              pollingTimeoutSec: '300'
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'JaCoCo'
+              summaryFileLocation: '$(system.defaultworkingdirectory)/**/target/site/jacoco/jacoco.xml'
+              reportDirectory: '$(system.defaultworkingdirectory)/**/target/site/jacoco/'
+              additionalCodeCoverageFiles: '$(system.defaultworkingdirectory)/**/target/jacoco.exec'
+
+          - task: sonar-buildbreaker@8
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+            inputs:
+              SonarQube: 'athena-sonar-connection'
+
+          - task: Bash@3
+            displayName: Log sonar is done
+            inputs:
+              targetType: 'inline'
+              script:
+                echo "sonar success"
+
+          - task: Bash@3
+            condition: and(succeeded(),eq(variables.buildFor, 'prod'))
+            displayName: Prod Branch Print Docker image
+            inputs:
+              targetType: 'inline'
+              script:
+                echo " ***** Image created at athenaacr.azurecr.io/athena-api-project-demo:$(build.BuildNumber)"
+
+          - task: Bash@3
+            condition: and(succeeded(),eq(variables.buildFor, 'nonprod'))
+            displayName: Non prod Branch Print Docker image
+            inputs:
+              targetType: 'inline'
+              script:
+                echo " ***** Image created at athenaacr.azurecr.io/athena-api-project-demo:$(build.BuildNumber)"
+
+          - task: Docker@2
+            displayName: Login to ACR
+            inputs:
+              command: login
+              containerRegistry: athenaacr-sn
+          - task: Docker@2
+            condition: and(succeeded(),eq(variables.buildFor, 'prod'))
+            displayName: Master Branch Build and Push Docker Image
+            inputs:
+              repository: 'athena-api-project-demo'
+              containerRegistry: athenaacr-sn
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              tags: |
+                $(build.BuildNumber)
+          - task: Docker@2
+            condition: and(succeeded(), eq(variables.buildFor, 'nonprod'))
+            displayName: Dev branch Build and Push Docker Image
+            inputs:
+              repository: 'athena-api-project-demo'
+              containerRegistry: athenaacr-sn
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              tags: |
+                $(build.BuildNumber)
+
+          - task: Docker@2
+            displayName: Logout of ACR
+            inputs:
+              command: logout
+              containerRegistry: athenaacr-sn
+
+          - task: Bash@3
+            displayName: Log Build and Push Docker Image is done
+            inputs:
+              targetType: 'inline'
+              script:
+                echo "Build and Push Docker Image success"

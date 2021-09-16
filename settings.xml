@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <server>
+            <id>athena-feed</id>
+            <username>transport-logistics</username>
+            <password>$(ATHENA_FEED_PASSWORD)</password>
+        </server>
+    </servers>
+    <profiles>
+        <profile>
+            <id>athena-build</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <repositories>
+                <repository>
+                    <id>athena-feed</id>
+                    <url>https://transport-logistics.pkgs.visualstudio.com/Athena/_packaging/athena-feed/maven/v1</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+                <repository>
+                    <id>jcenter-snapshots</id>
+                    <name>jcenter</name>
+                    <url>http://oss.jfrog.org/artifactory/oss-snapshot-local/</url>
+                    <releases>
+                        <enabled>false</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>athena-build</activeProfile>
+    </activeProfiles>
+</settings>

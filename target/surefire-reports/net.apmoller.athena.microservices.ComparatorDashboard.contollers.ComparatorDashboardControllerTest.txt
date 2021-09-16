@@ -1,0 +1,16 @@
+-------------------------------------------------------------------------------
+Test set: net.apmoller.athena.microservices.ComparatorDashboard.contollers.ComparatorDashboardControllerTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 4.193 s <<< FAILURE! - in net.apmoller.athena.microservices.ComparatorDashboard.contollers.ComparatorDashboardControllerTest
+testCreateContractRate  Time elapsed: 0.004 s  <<< ERROR!
+java.lang.IllegalStateException: Failed to load ApplicationContext
+Caused by: org.springframework.boot.context.properties.bind.BindException: Failed to bind properties under 'logging.level.net.apmoller.athena.microservices.contractrates' to org.springframework.boot.logging.LogLevel
+Caused by: org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [org.springframework.boot.logging.LogLevel] for value '${logLevel}'; nested exception is java.lang.IllegalArgumentException: No enum constant org.springframework.boot.logging.LogLevel.${logLevel}
+Caused by: java.lang.IllegalArgumentException: No enum constant org.springframework.boot.logging.LogLevel.${logLevel}
+
+testGetContractRate  Time elapsed: 0 s  <<< ERROR!
+java.lang.IllegalStateException: Failed to load ApplicationContext
+Caused by: org.springframework.boot.context.properties.bind.BindException: Failed to bind properties under 'logging.level.net.apmoller.athena.microservices.contractrates' to org.springframework.boot.logging.LogLevel
+Caused by: org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [org.springframework.boot.logging.LogLevel] for value '${logLevel}'; nested exception is java.lang.IllegalArgumentException: No enum constant org.springframework.boot.logging.LogLevel.${logLevel}
+Caused by: java.lang.IllegalArgumentException: No enum constant org.springframework.boot.logging.LogLevel.${logLevel}
+
